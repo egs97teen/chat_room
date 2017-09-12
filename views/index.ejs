@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title><%= title %></title>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script type ="text/javascript" src="/socket.io/socket.io.js"></script>
+	    <script type ="text/javascript">
+	    	var name = prompt("What is your name?");
+	        $(document).ready(function () {
+	            // this triggers the connection event in our server!
+	            var socket  = io.connect();
+	            // we'll write all the socket stuff after the above line!
+	            socket.emit("new_user", { name: name });		
+
+	            socket.on("add_new_user", function(user){
+	            	$('#current_users').append(`<p>${user.name}</p>`);
+	            	var join_message = `${user.name} has joined the room!`
+	            	$('#messages').append(`<p id="join">${join_message}</p>`)
+	            })	
+
+	            socket.on("user_taken", function(){
+	            	var name = prompt("Name taken. Pick a new name!");
+	            	socket.emit("new_user", { name: name });
+	            })
+
+	            socket.on("current_users", function(users){
+	            	var string = ""
+	            	for (let i=0; i < users.length; i++)
+	            	{
+	            		string += `<p id=${users[i].id}>${users[i].name}</p>`
+	            	}
+	            	$('#current_users').html(string)
+	            })
+
+	            socket.on("add_new_message", function(message){
+	            	$('#messages').append(`<p>${message.name}: ${message.message}</p>`)
+	            })
+
+	            socket.on("current_messages", function(messages){
+	            	var string = ""
+	            	for (let i=0; i < messages.length; i++) {
+	            		if (messages[i].type === 'message'){
+	            			string += `<p>${messages[i].name}: ${messages[i].message}</p>`
+	            		} else if (messages[i].type === 'status') {
+	            			string +=`<p>${messages[i].message}</p>`
+	            		}
+	            	}
+	            	$('#messages').html(string)
+	            })
+
+	            socket.on("user_left", function(data){
+	            	var string = ""
+	            	for (let i=0; i < data.users.length; i++)
+	            	{
+	            		string += `<p id=${data.users[i].id}>${data.users[i].name}</p>`
+	            	}
+	            	$('#current_users').html(string)
+	            	var disconnect_message = `${data.disconnected_user.name} has left the room!`
+	            	$('#messages').append(`<p id="leave">${disconnect_message}</p>`)
+	            })
+
+	            $('form').submit(function (e) {
+	            	e.preventDefault();
+	            	socket.emit("new_message", {
+	            		message: $("[name='message']").val(),
+	            		name: name
+	            	})
+	            	$('form').trigger('reset');
+	            })
+	        })
+	    </script>
+	</head>
+	<body>
+		<div id="chat_room">
+			<h3>Conversation Board</h3>
+			<div id="messages">
+			</div>
+			<h3>Current Users</h3>
+			<div id="current_users">
+			</div>
+			<form>
+				<p><input id="message" type="text" name="message"></p>
+				<p><input id="send_message" type="submit" value="Send"></p>
+			</form>
+		</div>
+	</body>
+</html>
